@@ -40,6 +40,8 @@ float last_temperature=0;
 float last_value=0;
 float last_hcho=0;
 
+int rev_interval_time_s=120;
+
 //--------------------------------------
 // void text()
 // {
@@ -142,7 +144,7 @@ int recv_outtime=0;
                     printf("\nbuf_to_data over rev_airdata_flag:%d\n",rev_airdata_flag);
                 }
             }
-            if(rev_airdata_flag==true&&(rev_time.time_int-last_save_time.time_int)>60)
+            if(rev_airdata_flag==true&&(rev_time.time_int-last_save_time.time_int)>rev_interval_time_s)
             {
                 last_save_time=rev_time;
                 save_airdata(rev_time,air_data);
