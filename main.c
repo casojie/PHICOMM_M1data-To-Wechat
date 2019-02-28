@@ -32,15 +32,19 @@ float range_hcho=50;
 //--------------------------------------
 int Client_socket=0;
 struct timeval recv_wait_time = {10,0}; 
-char write_buf[3][110];
+cJSON * save_ahours_data[3][4];
 int write_buf_index=0;
 
-float last_humidity=0;
-float last_temperature=0;
-float last_value=0;
-float last_hcho=0;
+// float last_humidity=0;
+// float last_temperature=0;
+// float last_value=0;
+// float last_hcho=0;
 
-int rev_interval_time_s=120;
+float max_vlue=0,max_hco=0;
+float hcho=0;
+
+int rev_interval_time_s=120,rev_all=0,rev_ok=0;
+struct TIME_cj rev_time,last_save_time,save_rev_time[3];
 
 //--------------------------------------
 // void text()
@@ -75,6 +79,7 @@ int main(int argc,const char* argv[])
 
     struct sockaddr_in remote;
 	socklen_t len=sizeof(struct sockaddr_in);
+    get_time(&last_save_time);
 
     while(1)
     {
@@ -92,7 +97,6 @@ int main(int argc,const char* argv[])
 char rev_buf[120];
 bool rev_airdata_flag=false;
 char air_data[110];
-struct TIME_cj rev_time,last_save_time;
 int recv_outtime=0;
 //-----------------------------------------------------
 // pthread_t t0;
@@ -144,9 +148,9 @@ int recv_outtime=0;
                     printf("\nbuf_to_data over rev_airdata_flag:%d\n",rev_airdata_flag);
                 }
             }
-            if(rev_airdata_flag==true&&(rev_time.time_int-last_save_time.time_int)>rev_interval_time_s)
+            if(rev_airdata_flag==true)
             {
-                last_save_time=rev_time;
+                // last_save_time=rev_time;
                 save_airdata(rev_time,air_data);
                 rev_airdata_flag=false;
             }
@@ -169,34 +173,86 @@ int save_airdata(struct TIME_cj time,char *airdata)
     vla=cJSON_GetObjectItem(json,"value");
     hco=cJSON_GetObjectItem(json,"hcho");
 
-    if(fabs(atof(hum->valuestring)-last_humidity)>=range_humidity ||
-        fabs(atof(tem->valuestring)-last_temperature)>=range_temperature ||
-        fabs(atof(vla->valuestring)-last_value)>=range_value ||
-        fabs(atof(hco->valuestring)-last_hcho)>=range_hcho)
+    rev_all++;
+    if(atof(vla->valuestring)<=50&&atof(hco->valuestring)<=80)
+    rev_ok++;
+
+    if(atof(vla->valuestring)>max_vlue)
     {
-        last_humidity=atof(hum->valuestring);
-        last_temperature=atof(tem->valuestring);
-        last_value=atof(vla->valuestring);
-        last_hcho=atof(hco->valuestring);
-        
-        if(atof(vla->valuestring)>=100||atof(hco->valuestring)>=120)
-        sprintf(write_buf[write_buf_index++],"|__%s__|__%s__|__%s__|__%s__|__%02f__|\n",time.time_char,tem->valuestring,hum->valuestring,vla->valuestring,last_hcho/1000);
-
-        else if(atof(vla->valuestring)>=50||atof(hco->valuestring)>=80)
-        sprintf(write_buf[write_buf_index++],"|_%s_|_%s_|_%s_|_%s_|_%02f_|\n",time.time_char,tem->valuestring,hum->valuestring,vla->valuestring,last_hcho/1000);
-
-        else
-        sprintf(write_buf[write_buf_index++],"|%s|%s|%s|%s|%02f|\n",time.time_char,tem->valuestring,hum->valuestring,vla->valuestring,last_hcho/1000);
-        
-        if(write_buf_index==3)
-        {
-            write_buf_index=0;
-            FILE *fp=fopen("m1_airdata.txt","a+");
-            fputs(write_buf[0],fp);
-            fputs(write_buf[1],fp);
-            fputs(write_buf[2],fp);
-            fclose(fp);
-        }
+        save_rev_time[0]=time;
+        max_vlue=atof(vla->valuestring);
+        save_ahours_data[0][0]=hum;
+        save_ahours_data[0][1]=tem;
+        save_ahours_data[0][2]=vla;
+        save_ahours_data[0][3]=hco;
     }
+
+    if(atof(hco->valuestring)>max_hco)
+    {
+        save_rev_time[1]=time;
+        max_hco=atof(hco->valuestring);
+        save_ahours_data[1][0]=hum;
+        save_ahours_data[1][1]=tem;
+        save_ahours_data[1][2]=vla;
+        save_ahours_data[1][3]=hco;
+    }
+
+    if((time.time_int-last_save_time.time_int)>=3600&&rev_all>3)
+    {
+        save_rev_time[2]=time;
+        last_save_time=time;
+        max_hco=0;max_vlue=0;
+        save_ahours_data[2][0]=hum;
+        save_ahours_data[2][1]=tem;
+        save_ahours_data[2][2]=vla;
+        save_ahours_data[2][3]=hco;
+
+        FILE *fp=fopen("m1_airdata.txt","a+");
+
+        for(int i=0;i<3;i++)
+        {
+            char write_buf[110];
+            if(atof(save_ahours_data[i][2]->valuestring)>=100||atof(save_ahours_data[i][3]->valuestring)>=120)
+                sprintf(write_buf,"|X__%s__|__%s__|__%s__|__%s__|__%.2f__|__%.2f__|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,((float)rev_ok/rev_all)*100);
+            else if(atof(save_ahours_data[i][2]->valuestring)>50||atof(save_ahours_data[i][3]->valuestring)>80)
+                sprintf(write_buf,"|⚠_%s_|_%s_|_%s_|_%s_|_%.2f_|_%.2f_|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,((float)rev_ok/rev_all)*100);
+            else
+                sprintf(write_buf,"|√%s|%s|%s|%s|%.2f|%.2f|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,((float)rev_ok/rev_all)*100);
+
+            fputs(write_buf,fp);
+        }
+        fclose(fp);
+    }
+    //------------------------------------------------------------------------------------------------------
+
+    // if(fabs(atof(hum->valuestring)-last_humidity)>=range_humidity ||
+    //     fabs(atof(tem->valuestring)-last_temperature)>=range_temperature ||
+    //     fabs(atof(vla->valuestring)-last_value)>=range_value ||
+    //     fabs(atof(hco->valuestring)-last_hcho)>=range_hcho)
+    // {
+    //     last_humidity=atof(hum->valuestring);
+    //     last_temperature=atof(tem->valuestring);
+    //     last_value=atof(vla->valuestring);
+    //     last_hcho=atof(hco->valuestring);
+        
+    //     if(atof(vla->valuestring)>=100||atof(hco->valuestring)>=120)
+    //     sprintf(write_buf[write_buf_index++],"|X__%s__|__%s__|__%s__|__%s__|__%.2f__|\n",time.time_char,tem->valuestring,hum->valuestring,vla->valuestring,last_hcho/1000);
+
+    //     else if(atof(vla->valuestring)>=50||atof(hco->valuestring)>=80)
+    //     sprintf(write_buf[write_buf_index++],"|⚠_%s_|_%s_|_%s_|_%s_|_%.2f_|\n",time.time_char,tem->valuestring,hum->valuestring,vla->valuestring,last_hcho/1000);
+
+    //     else
+    //     sprintf(write_buf[write_buf_index++],"|√%s|%s|%s|%s|%.2f|\n",time.time_char,tem->valuestring,hum->valuestring,vla->valuestring,last_hcho/1000);
+        
+    //     if(write_buf_index==3)
+    //     {
+    //         write_buf_index=0;
+    //         FILE *fp=fopen("m1_airdata.txt","a+");
+    //         fputs(write_buf[0],fp);
+    //         fputs(write_buf[1],fp);
+    //         fputs(write_buf[2],fp);
+    //         fclose(fp);
+    //     }
+    // }
     return 0;
 }
