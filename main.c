@@ -201,7 +201,6 @@ int save_airdata(struct TIME_cj time,char *airdata)
         save_rev_time[2]=time;
         last_save_time=time;
         max_hco=0;max_vlue=0;
-        rev_all=0;rev_ok=0;
         save_ahours_data[2][0]=hum;
         save_ahours_data[2][1]=tem;
         save_ahours_data[2][2]=vla;
@@ -222,6 +221,7 @@ int save_airdata(struct TIME_cj time,char *airdata)
             fputs(write_buf,fp);
         }
         fclose(fp);
+        rev_all=0;rev_ok=0;
     }
     //------------------------------------------------------------------------------------------------------
 
