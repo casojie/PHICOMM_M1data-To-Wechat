@@ -83,11 +83,11 @@ int main(int argc,const char* argv[])
 
     while(1)
     {
-        printf("listen_socke has made\n");
+        // printf("listen_socke has made\n");
         Client_socket=accept(listen_socke,(struct sockaddr*)&remote,&len);
         if(Client_socket<0)
 		{
-			printf("Client_socket_error\n");
+			// printf("Client_socket_error\n");
 			continue;
 		}
         printf("Client connecting\n");
@@ -105,10 +105,10 @@ int recv_outtime=0;
         while(1)
         {
             //sleep(1);
-            printf("start_read\n");
+            // printf("start_read\n");
             int rev_length=recv(Client_socket,rev_buf,sizeof(rev_buf),0);
             // int rev_length=read(Client_socket,rev_buf,sizeof(rev_buf));
-            printf("read_over\n");
+            // printf("read_over\n");
             {
                 if(rev_length<=0)
                 {
@@ -117,13 +117,13 @@ int recv_outtime=0;
                     {
                         char send_buf[55];
                         Get_send_char(send_buf);
-                        printf("try send state\n");
+                        // printf("try send state\n");
                         send(Client_socket,send_buf,55,MSG_NOSIGNAL);
-                        printf("send over\n");
+                        // printf("send over\n");
                         sleep(3);
                         if(recv_outtime>=5)
                         {
-                            printf("connect is close\n");
+                            // printf("connect is close\n");
                             close(Client_socket);
                             break;
                         }
@@ -137,7 +137,7 @@ int recv_outtime=0;
             {
                 if(rev_buf[i]=='{')
                 {
-                    printf("%d:buf_to_data start\n%s:",i,rev_time.time_char);
+                    // printf("%d:buf_to_data start\n%s:",i,rev_time.time_char);
                     for (int j = 0; rev_buf[i - 1] != '}'&&i<rev_length; j++,i++)
                     {
                         air_data[j] = rev_buf[i];
@@ -145,12 +145,11 @@ int recv_outtime=0;
                     }
                     if(rev_buf[i-1]=='}')
                     rev_airdata_flag = true;
-                    printf("\nbuf_to_data over rev_airdata_flag:%d\n",rev_airdata_flag);
+                    // printf("\nbuf_to_data over rev_airdata_flag:%d\n",rev_airdata_flag);
                 }
             }
             if(rev_airdata_flag==true)
             {
-                // last_save_time=rev_time;
                 save_airdata(rev_time,air_data);
                 rev_airdata_flag=false;
             }
@@ -165,7 +164,7 @@ int save_airdata(struct TIME_cj time,char *airdata)
     json=cJSON_Parse(airdata);
     if(!json)
     {
-        printf("airdata to json error\n");
+        // printf("airdata to json error\n");
         return -1;
     }
     hum=cJSON_GetObjectItem(json,"humidity");
@@ -202,6 +201,7 @@ int save_airdata(struct TIME_cj time,char *airdata)
         save_rev_time[2]=time;
         last_save_time=time;
         max_hco=0;max_vlue=0;
+        rev_all=0;rev_ok=0;
         save_ahours_data[2][0]=hum;
         save_ahours_data[2][1]=tem;
         save_ahours_data[2][2]=vla;
