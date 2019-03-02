@@ -212,11 +212,11 @@ int save_airdata(struct TIME_cj time,char *airdata)
         {
             char write_buf[110];
             if(atof(save_ahours_data[i][2]->valuestring)>=100||atof(save_ahours_data[i][3]->valuestring)>=120)
-                sprintf(write_buf,"|X__%s__|__%s__|__%s__|__%s__|__%.2f__|__%.2f__|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,((float)rev_ok/rev_all)*100);
+                sprintf(write_buf,"|X__%s__|__%s__|__%s__|__%s__|__%.2f__|__%d/%d__|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,rev_ok,rev_all);
             else if(atof(save_ahours_data[i][2]->valuestring)>50||atof(save_ahours_data[i][3]->valuestring)>80)
-                sprintf(write_buf,"|⚠_%s_|_%s_|_%s_|_%s_|_%.2f_|_%.2f_|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,((float)rev_ok/rev_all)*100);
+                sprintf(write_buf,"|⚠_%s_|_%s_|_%s_|_%s_|_%.2f_|_%d/%d_|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,rev_ok,rev_all);
             else
-                sprintf(write_buf,"|√%s|%s|%s|%s|%.2f|%.2f|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,((float)rev_ok/rev_all)*100);
+                sprintf(write_buf,"|√%s|%s|%s|%s|%.2f|%d/%d|\n",save_rev_time[i].time_char,save_ahours_data[i][0]->valuestring,save_ahours_data[i][1]->valuestring,save_ahours_data[i][2]->valuestring,atof(save_ahours_data[i][3]->valuestring)/1000,rev_ok,rev_all);
 
             fputs(write_buf,fp);
         }
