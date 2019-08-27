@@ -59,7 +59,6 @@ struct TIME_cj rev_time,last_save_time,save_rev_time[3];
 //             printf("text:close is over\n");
 //         }
 //     }
-    
 // }
 //--------------------------------------
 int main(int argc,const char* argv[])
@@ -91,8 +90,7 @@ int main(int argc,const char* argv[])
 			continue;
 		}
         printf("Client connecting\n");
-        setsockopt(Client_socket,SOL_SOCKET,SO_RCVTIMEO,(char *)&recv_wait_time,sizeof(struct timeval)); //设置socket 接收拥塞超时时间
-
+        setsockopt(Client_socket,SOL_SOCKET,SO_RCVTIMEO,(char *)&recv_wait_time,sizeof(struct timeval)); //设置非拥塞等待
 //-----------------------------------------------------
 char rev_buf[120];
 bool rev_airdata_flag=false;
@@ -110,32 +108,32 @@ int recv_outtime=0;
             // int rev_length=read(Client_socket,rev_buf,sizeof(rev_buf));
             // printf("read_over\n");
             {
-                if(rev_length<=0)
+                if(rev_length<=0)       //如果没有收到数据
                 {
-                    recv_outtime++;
-                    if(recv_outtime>=3)
+                    recv_outtime++;     //计数，没有收到数据的计数
+                    if(recv_outtime>=3) //超过三次，发送信息到M1，激活M1发送空气数据过来
                     {
-                        char send_buf[55];
+                        char send_buf[55]; //发送缓冲器，发送的信息会激活M1发送空气数据
                         Get_send_char(send_buf);
                         // printf("try send state\n");
-                        send(Client_socket,send_buf,55,MSG_NOSIGNAL);
+                        send(Client_socket,send_buf,55,MSG_NOSIGNAL);//发送激活信息,MSG_NOSINGNAL忽略信号
                         // printf("send over\n");
-                        sleep(3);
-                        if(recv_outtime>=5)
+                        sleep(3);   //休眠三秒
+                        if(recv_outtime>=5) //如果没有收到数据超过五次，则任务改TCP连接已经断开
                         {
                             // printf("connect is close\n");
-                            close(Client_socket);
-                            break;
+                            close(Client_socket);//服务器主动关闭套接字
+                            break;//退出循环，然后重新等待M1连接
                         }
                     }
                     continue;
                 }
             }
-            recv_outtime=0;
-            get_time(&rev_time);
-            for(int i = 0; i < rev_length; i++)
+            recv_outtime=0;//重置计数器
+            get_time(&rev_time);//获取收到数据的时间
+            for(int i = 0; i < rev_length; i++)//从接受的数据提取信息,每次发送的数据中，除了json格式的空气数据，还有一些不明字符
             {
-                if(rev_buf[i]=='{')
+                if(rev_buf[i]=='{') //赛选空气数据
                 {
                     // printf("%d:buf_to_data start\n%s:",i,rev_time.time_char);
                     for (int j = 0; rev_buf[i - 1] != '}'&&i<rev_length; j++,i++)
@@ -143,28 +141,27 @@ int recv_outtime=0;
                         air_data[j] = rev_buf[i];
                         printf("%c",air_data[j]);
                     }
-                    if(rev_buf[i-1]=='}')
-                    rev_airdata_flag = true;
+                    if(rev_buf[i-1]=='}')//收到的json数据完整，有时候会出现接收的json的数据不完整
+                    rev_airdata_flag = true;//打开接受数据有效标志位
                     // printf("\nbuf_to_data over rev_airdata_flag:%d\n",rev_airdata_flag);
                 }
             }
-            if(rev_airdata_flag==true)
+            if(rev_airdata_flag==true)//收到的数据完整，解析
             {
-                save_airdata(rev_time,air_data);
+                save_airdata(rev_time,air_data);//存储数据到M1_airdata.txt
                 rev_airdata_flag=false;
             }
         }
         
     } 
 }
-int save_airdata(struct TIME_cj time,char *airdata)
+int save_airdata(struct TIME_cj time,char *airdata)//PM2.5数据最大值，甲醛数据最高值,每隔两小时采集一次数据
 {
     cJSON *json=0,*hum=0,*tem=0,*vla=0,*hco=0;
 
     json=cJSON_Parse(airdata);
     if(!json)
     {
-        // printf("airdata to json error\n");
         return -1;
     }
     hum=cJSON_GetObjectItem(json,"humidity");
@@ -196,7 +193,7 @@ int save_airdata(struct TIME_cj time,char *airdata)
         save_ahours_data[1][3]=hco;
     }
 
-    if((time.time_int-last_save_time.time_int)>=3600&&rev_all>3)
+    if((time.time_int-last_save_time.time_int)>=3600&&rev_all>3)//收到的数据有三分并且过了2小时
     {
         save_rev_time[2]=time;
         last_save_time=time;
@@ -206,7 +203,7 @@ int save_airdata(struct TIME_cj time,char *airdata)
         save_ahours_data[2][2]=vla;
         save_ahours_data[2][3]=hco;
 
-        FILE *fp=fopen("m1_airdata.txt","a+");
+        FILE *fp=fopen("m1_airdata.txt","a+");//打开存储数据文本
 
         for(int i=0;i<3;i++)
         {
