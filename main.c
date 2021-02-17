@@ -18,6 +18,7 @@
 #include "send_server_state.h"
 #include "get_time.h"
 #define MAX_LISTEN 10
+#define RECV_DATA_OUTTIME 300 //5分钟
 
 int save_airdata(struct TIME_cj time,char *airdata);
 //--------------------------------------
@@ -35,10 +36,6 @@ struct timeval recv_wait_time = {10,0};
 cJSON * save_ahours_data[3][4];
 int write_buf_index=0;
 
-// float last_humidity=0;
-// float last_temperature=0;
-// float last_value=0;
-// float last_hcho=0;
 
 float max_vlue=0,max_hco=0;
 float hcho=0;
@@ -46,21 +43,6 @@ float hcho=0;
 int rev_interval_time_s=120,rev_all=0,rev_ok=0;
 struct TIME_cj rev_time,last_save_time,save_rev_time[3];
 
-//--------------------------------------
-// void text()
-// {
-//     int a;
-//     while(1){
-//         scanf("%d",&a);
-//         if(a==0)
-//         {
-//             printf("text:try close socket\n");
-//             close(Client_socket);
-//             printf("text:close is over\n");
-//         }
-//     }
-// }
-//--------------------------------------
 int main(int argc,const char* argv[])
 {
     {
@@ -111,7 +93,7 @@ int recv_outtime=0;
                 if(rev_length<=0)       //如果没有收到数据
                 {
                     recv_outtime++;     //计数，没有收到数据的计数
-                    if(recv_outtime>=3) //超过三次，发送信息到M1，激活M1发送空气数据过来
+                    if(recv_outtime>=RECV_DATA_OUTTIME) //超过RECV_DATA_OUTTIME次，发送信息到M1，激活M1发送空气数据过来
                     {
                         char send_buf[55]; //发送缓冲器，发送的信息会激活M1发送空气数据
                         Get_send_char(send_buf);
@@ -119,7 +101,7 @@ int recv_outtime=0;
                         send(Client_socket,send_buf,55,MSG_NOSIGNAL);//发送激活信息,MSG_NOSINGNAL忽略信号
                         // printf("send over\n");
                         sleep(3);   //休眠三秒
-                        if(recv_outtime>=5) //如果没有收到数据超过五次，则任务改TCP连接已经断开
+                        if(recv_outtime>=(RECV_DATA_OUTTIME+3)) //如果没有收到数据超过规定次数，则任务改TCP连接已经断开
                         {
                             // printf("connect is close\n");
                             close(Client_socket);//服务器主动关闭套接字
